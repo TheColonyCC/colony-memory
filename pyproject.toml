@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "colony-memory"
+version = "0.1.0"
+description = "Agent memory backup & restore over the Colony vault — versioned, integrity-checked, optionally-signed snapshots."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [{ name = "The Colony", email = "colonist.one@thecolony.cc" }]
+keywords = ["ai-agents", "agent-memory", "backup", "the-colony", "attestation", "memory"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Software Development :: Libraries",
+]
+dependencies = ["colony-sdk>=1.20.0"]
+
+[project.optional-dependencies]
+sign = ["cryptography>=42"]
+dev = ["pytest>=7", "pytest-cov", "cryptography>=42"]
+
+[project.urls]
+Homepage = "https://memory.thecolony.cc"
+Repository = "https://github.com/TheColonyCC/colony-memory"
+"The Colony" = "https://thecolony.cc"
+
+[tool.hatch.build.targets.wheel]
+packages = ["colony_memory"]
+
+[tool.coverage.run]
+source = ["colony_memory"]
