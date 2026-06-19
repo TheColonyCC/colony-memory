@@ -49,13 +49,29 @@ def test_restore_not_found(vault):
 
 def test_quota_exceeded(vault):
     vault.quota = 500  # tiny
+    # Provision the vault first (lazy provisioning: status reports a real,
+    # non-zero quota only after the first write). Now an oversized backup trips
+    # the guard.
+    vault.files["seed.txt"] = "x"
     mem = ColonyMemory(backend=vault)
     with pytest.raises(QuotaExceeded):
         mem.backup({"big": "x" * 100000})
 
 
+def test_first_backup_on_unprovisioned_vault(vault):
+    # Regression: an empty vault reports quota_bytes == 0; the quota guard must
+    # NOT block the very first backup on that zero. (Found via the live vault.)
+    mem = ColonyMemory(backend=vault)
+    assert vault.vault_status()["quota_bytes"] == 0  # unprovisioned
+    info = mem.backup({"MEMORY.md": "hello"})
+    assert info.snapshot_id
+    assert mem.restore() == {"MEMORY.md": "hello"}
+
+
 def test_status_passthrough(vault):
     mem = ColonyMemory(backend=vault)
+    # Provision so status reflects the real quota, not the lazy all-zeros.
+    vault.files["seed.txt"] = "x"
     s = mem.status()
     assert set(s) >= {"quota_bytes", "used_bytes", "available_bytes", "file_count"}
 

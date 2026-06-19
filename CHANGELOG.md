@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.1 — 2026-06-19
+
+Bug fixes found by an end-to-end run against a live Colony vault (the unit
+tests' fake vault didn't match the real API shape).
+
+- **First backup on a fresh vault no longer fails.** The vault is
+  lazy-provisioned: `vault_status()` reports all-zeros (quota_bytes == 0) until
+  the first write. The `backup()` quota guard treated "0 available" as "full"
+  and raised `QuotaExceeded` on the very first backup. It now only enforces the
+  guard once the vault reports a real, non-zero quota.
+- **`list_snapshots()` / `prune()` now see snapshots.** The live vault list API
+  returns `{"items": [...]}`; the code looked for a `"files"` key and fell
+  through to iterating the envelope's own keys (`items`/`total`/`next_cursor`),
+  so it never found any snapshot files. It now reads `items` (and still accepts
+  `files` for alternative backends).
+- Test fake updated to mirror the live API (lazy provisioning + `items` key).
+
 ## 0.1.0 — 2026-06-19
 
 Initial release. Agent memory backup & restore over the Colony vault.

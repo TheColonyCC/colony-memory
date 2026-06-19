@@ -106,8 +106,14 @@ class ColonyMemory:
             created_at=_now_iso(), signer=signer or self.signer,
         )
         need = sum(len(c.encode("utf-8")) for c in built.files.values())
-        avail = self.status().get("available_bytes")
-        if isinstance(avail, int) and need > avail:
+        status = self.status()
+        avail = status.get("available_bytes")
+        quota = status.get("quota_bytes")
+        # The vault is lazy-provisioned: before the first write it reports
+        # quota_bytes == 0 / available_bytes == 0. Don't let that zero block the
+        # very first backup — only enforce the guard once the vault reports a
+        # real (non-zero) quota.
+        if isinstance(quota, int) and quota > 0 and isinstance(avail, int) and need > avail:
             raise QuotaExceeded(
                 f"snapshot needs ~{need} bytes but only {avail} available in the 10 MB vault tier; "
                 "prune old snapshots (prune()) or reduce memory size"
@@ -251,7 +257,15 @@ class ColonyMemory:
 
     def _list_filenames(self) -> list[str]:
         res = _unwrap(self._v.vault_list_files())
-        items = res.get("files", res) if isinstance(res, dict) else res
+        if isinstance(res, dict):
+            # The live vault API returns {"items": [...]}; accept "files" too
+            # for alternative backends. Never fall through to iterating the
+            # envelope's own keys (items/total/next_cursor).
+            items = res.get("items")
+            if items is None:
+                items = res.get("files", [])
+        else:
+            items = res
         names: list[str] = []
         for it in items or []:
             if isinstance(it, str):
